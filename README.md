@@ -157,9 +157,9 @@ if result['alerts']:
 
 ## Support
 
-For technical support or questions, please contact:
-- Email: support@yourdomain.com
-- Phone: (XXX) XXX-XXXX
+For questions, please contact me at:
+- Email: mhosny@berkeley.edu
+- Phone: (510) 219-3005
 
 ## License
 
