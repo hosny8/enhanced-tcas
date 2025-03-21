@@ -1,113 +1,147 @@
-from .model import TCASObjectClassifier
+from typing import Dict, List, Optional, Any
+import numpy as np
+from .model import ObjectClassifier
 from .data_processor import SensorDataProcessor, SensorData
 from .predictor import CollisionPredictor
-from typing import Dict, Any
+from .weather_integration import WeatherRiskAssessor, WeatherData
 
 class EnhancedTCAS:
     def __init__(self):
         """Initialize the Enhanced TCAS system."""
-        self.object_classifier = TCASObjectClassifier()
+        self.classifier = ObjectClassifier()
         self.data_processor = SensorDataProcessor()
-        self.collision_predictor = CollisionPredictor()
+        self.predictor = CollisionPredictor()
+        self.weather_assessor = WeatherRiskAssessor()
         
-    def process_sensor_data(self,
-                          transponder_data: dict,
-                          radar_data: dict,
-                          visual_data: any) -> SensorData:
-        """Process and fuse all sensor data."""
-        return self.data_processor.fuse_sensor_data(
-            transponder_data,
-            radar_data,
-            visual_data
-        )
-    
-    def classify_object(self, sensor_data: SensorData) -> tuple:
-        """Classify detected object using CNN model."""
-        return self.object_classifier.classify_object(sensor_data.image_data)
-    
-    def assess_collision_risk(self,
-                            ownship_data: SensorData,
-                            intruder_data: SensorData) -> dict:
-        """Assess collision risk between ownship and intruder."""
-        return self.collision_predictor.detect_collision_risk(
-            ownship_data,
-            intruder_data
-        )
-    
-    def generate_alert(self, risk_assessment: dict) -> dict:
-        """Generate appropriate alert based on risk assessment."""
-        return self.collision_predictor.generate_alert(risk_assessment)
-    
-    def _generate_detailed_object_info(self, 
-                                    class_id: int, 
-                                    confidence: float, 
-                                    detailed_class: Dict) -> Dict[str, Any]:
-        """Generate detailed information about a detected object."""
-        return {
-            "basic_info": {
-                "type": self.object_classifier.get_class_name(class_id),
-                "confidence": confidence
-            },
-            "detailed_info": {
-                "main_category": detailed_class["main_category"],
-                "subcategory": detailed_class["subcategory"],
-                "specific_type": detailed_class["specific_type"],
-                "available_types": detailed_class["available_types"]
-            },
-            "confidence_scores": detailed_class["confidences"]
-        }
-    
     def process_update(self,
-                      ownship_data: dict,
-                      intruder_data: dict,
-                      visual_data: any) -> dict:
+                      ownship_data: Dict[str, Any],
+                      intruder_data: Dict[str, Any],
+                      weather_data: Optional[Dict[str, Any]] = None) -> Dict:
         """
-        Process a complete update cycle of the TCAS system.
-        Returns: Dictionary containing classification, risk assessment, and alerts
+        Process sensor data and generate alerts.
+        Args:
+            ownship_data: Dictionary containing ownship sensor data
+            intruder_data: Dictionary containing intruder sensor data
+            weather_data: Optional dictionary containing weather data
+        Returns:
+            Dictionary containing processed results and alerts
         """
         # Process sensor data
-        ownship_processed = self.process_sensor_data(
-            ownship_data['transponder'],
-            ownship_data['radar'],
-            visual_data
-        )
-        
-        intruder_processed = self.process_sensor_data(
-            intruder_data['transponder'],
-            intruder_data['radar'],
-            visual_data
-        )
+        ownship_processed = self.data_processor.process_sensor_data(ownship_data)
+        intruder_processed = self.data_processor.process_sensor_data(intruder_data)
         
         # Classify objects with enhanced detail
-        ownship_class, ownship_conf, ownship_detailed = self.classify_object(ownship_processed)
-        intruder_class, intruder_conf, intruder_detailed = self.classify_object(intruder_processed)
-        
-        # Assess collision risk
-        risk_assessment = self.assess_collision_risk(
-            ownship_processed,
-            intruder_processed
-        )
-        
-        # Generate alerts
-        alerts = self.generate_alert(risk_assessment)
+        ownship_classification = self.classifier.classify_object(ownship_processed)
+        intruder_classification = self.classifier.classify_object(intruder_processed)
         
         # Generate detailed object information
-        ownship_info = self._generate_detailed_object_info(
-            ownship_class, 
-            ownship_conf, 
-            ownship_detailed
-        )
+        ownship_info = self._generate_detailed_object_info(ownship_processed, ownship_classification)
+        intruder_info = self._generate_detailed_object_info(intruder_processed, intruder_classification)
         
-        intruder_info = self._generate_detailed_object_info(
-            intruder_class, 
-            intruder_conf, 
-            intruder_detailed
-        )
+        # Detect collision risks
+        risk_assessment = self.predictor.detect_collision_risk(ownship_processed, intruder_processed)
+        
+        # Process weather data if available
+        weather_assessment = None
+        if weather_data:
+            weather_data_obj = WeatherData(
+                visibility=weather_data.get('visibility', 10000),
+                precipitation_rate=weather_data.get('precipitation_rate', 0),
+                cloud_ceiling=weather_data.get('cloud_ceiling', 10000),
+                wind_speed=weather_data.get('wind_speed', 0),
+                wind_direction=weather_data.get('wind_direction', 0),
+                turbulence_index=weather_data.get('turbulence_index', 0),
+                icing_potential=weather_data.get('icing_potential', 0),
+                lightning_activity=weather_data.get('lightning_activity', 0)
+            )
+            weather_assessment = self.weather_assessor.assess_weather_risk(weather_data_obj)
+            
+            # Adjust risk assessment based on weather conditions
+            risk_assessment = self._adjust_risk_for_weather(risk_assessment, weather_assessment)
+        
+        # Generate alerts
+        alerts = self.predictor.generate_alert(risk_assessment)
+        
+        # Add weather-related alerts if available
+        if weather_assessment:
+            alerts.extend(self._generate_weather_alerts(weather_assessment))
         
         return {
-            "ownship": ownship_info,
-            "intruder": intruder_info,
-            "risk_assessment": risk_assessment,
-            "alerts": alerts,
-            "timestamp": ownship_processed.timestamp
-        } 
+            'ownship': ownship_info,
+            'intruder': intruder_info,
+            'risk_assessment': risk_assessment,
+            'weather_assessment': weather_assessment,
+            'alerts': alerts,
+            'timestamp': ownship_data.get('timestamp', '')
+        }
+    
+    def _generate_detailed_object_info(self, 
+                                    sensor_data: SensorData,
+                                    classification: Dict) -> Dict:
+        """Generate detailed information about detected objects."""
+        return {
+            'basic_info': {
+                'type': classification['type'],
+                'confidence': classification['confidence'],
+                'position': sensor_data.transponder_data['position'],
+                'altitude': sensor_data.transponder_data['altitude'],
+                'speed': sensor_data.transponder_data['speed'],
+                'heading': sensor_data.transponder_data['heading']
+            },
+            'detailed_classification': classification['detailed_classification'],
+            'possible_types': classification['possible_types'],
+            'confidence_scores': classification['confidence_scores'],
+            'additional_features': sensor_data.additional_features
+        }
+    
+    def _adjust_risk_for_weather(self, 
+                               risk_assessment: Dict,
+                               weather_assessment: Dict) -> Dict:
+        """Adjust risk assessment based on weather conditions."""
+        # Increase risk level if weather conditions are severe
+        if weather_assessment['risk_level'] == "CRITICAL":
+            risk_assessment['risk_level'] = "CRITICAL"
+        elif weather_assessment['risk_level'] == "HIGH" and risk_assessment['risk_level'] != "CRITICAL":
+            risk_assessment['risk_level'] = "HIGH"
+        
+        # Adjust separation requirements based on visibility
+        visibility_factor = weather_assessment['risk_factors']['visibility']
+        if visibility_factor >= 0.8:
+            risk_assessment['min_separation'] *= 1.5
+        elif visibility_factor >= 0.6:
+            risk_assessment['min_separation'] *= 1.2
+        
+        return risk_assessment
+    
+    def _generate_weather_alerts(self, weather_assessment: Dict) -> List[Dict]:
+        """Generate weather-related alerts."""
+        alerts = []
+        
+        # Add weather-specific alerts based on risk level
+        if weather_assessment['risk_level'] == "CRITICAL":
+            alerts.append({
+                "level": "WEATHER_ALERT",
+                "message": "CRITICAL WEATHER CONDITIONS DETECTED",
+                "urgency": "CRITICAL",
+                "recommended_action": "IMMEDIATE WEATHER AVOIDANCE REQUIRED",
+                "weather_conditions": weather_assessment['weather_conditions']
+            })
+        elif weather_assessment['risk_level'] == "HIGH":
+            alerts.append({
+                "level": "WEATHER_ALERT",
+                "message": "SEVERE WEATHER CONDITIONS DETECTED",
+                "urgency": "HIGH",
+                "recommended_action": "PREPARE FOR WEATHER AVOIDANCE",
+                "weather_conditions": weather_assessment['weather_conditions']
+            })
+        
+        # Add specific weather-related recommendations
+        for recommendation in weather_assessment['recommendations']:
+            alerts.append({
+                "level": "WEATHER_ADVISORY",
+                "message": recommendation,
+                "urgency": "MEDIUM",
+                "recommended_action": recommendation
+            })
+        
+        return alerts 
