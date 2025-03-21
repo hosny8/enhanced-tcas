@@ -1,7 +1,10 @@
 # Enhanced TCAS (Traffic Collision Avoidance System) for Gulfstream 550
 
-An advanced Traffic Collision Avoidance System (TCAS) specifically designed for Part 135 Charter operators flying Gulfstream 550 aircraft. This system enhances traditional TCAS capabilities with advanced object recognition, predictive analytics, and improved situational awareness.
+An advanced Traffic Collision Avoidance System (TCAS) specifically designed for Part 135 Charter operators flying Gulfstream 550 aircraft. This system enhances traditional TCAS capabilities with advanced object recognition, predictive analytics, and improved situational awareness. When it comes to aviation, safety is the number one priority, and this system is designed to enhance that. 
 
+The main reason I built this project is because I believe there’s significant potential for improvement in existing TCAS technology. With the advancements we’ve seen in technology today, a system like this-—especially if licensing under the FAA can be done(I know it's not that easy)-—should be more advanced and contribute to even greater safety. A system like this could have potentially prevented incidents like the tragic mid-air collision that happened at Ronald Reagan Airport on January 29, 2025.  
+
+I coded this system using Cursor.
 ## Key Features
 
 ### 1. Advanced Object Recognition
@@ -191,12 +194,10 @@ This Enhanced TCAS system is designed to be implemented as a supplemental system
 - Requires regular validation and maintenance
 - Must be used in conjunction with existing safety systems
 
-## Support
+## Questions
 
-For questions, please contact me at:
+For questions, contact me at:
 - Email: mhosny@berkeley.edu
 - Phone: (510) 219-3005
 
-## License
 
-This project is licensed under the MIT License - see the LICENSE file for details. 
