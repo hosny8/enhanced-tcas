@@ -4,6 +4,7 @@ from .model import ObjectClassifier
 from .data_processor import SensorDataProcessor, SensorData
 from .predictor import CollisionPredictor
 from .weather_integration import WeatherRiskAssessor, WeatherData
+from .terrain_awareness import TerrainAwarenessSystem, TerrainData
 
 class EnhancedTCAS:
     def __init__(self):
@@ -12,17 +13,20 @@ class EnhancedTCAS:
         self.data_processor = SensorDataProcessor()
         self.predictor = CollisionPredictor()
         self.weather_assessor = WeatherRiskAssessor()
+        self.terrain_assessor = TerrainAwarenessSystem()
         
     def process_update(self,
                       ownship_data: Dict[str, Any],
                       intruder_data: Dict[str, Any],
-                      weather_data: Optional[Dict[str, Any]] = None) -> Dict:
+                      weather_data: Optional[Dict[str, Any]] = None,
+                      terrain_data: Optional[Dict[str, Any]] = None) -> Dict:
         """
         Process sensor data and generate alerts.
         Args:
             ownship_data: Dictionary containing ownship sensor data
             intruder_data: Dictionary containing intruder sensor data
             weather_data: Optional dictionary containing weather data
+            terrain_data: Optional dictionary containing terrain data
         Returns:
             Dictionary containing processed results and alerts
         """
@@ -59,18 +63,41 @@ class EnhancedTCAS:
             # Adjust risk assessment based on weather conditions
             risk_assessment = self._adjust_risk_for_weather(risk_assessment, weather_assessment)
         
+        # Process terrain data if available
+        terrain_assessment = None
+        if terrain_data:
+            terrain_data_obj = TerrainData(
+                aircraft_altitude=terrain_data.get('aircraft_altitude', 0),
+                terrain_elevation=terrain_data.get('terrain_elevation', 0),
+                terrain_slope=terrain_data.get('terrain_slope', 0),
+                distance_to_terrain=terrain_data.get('distance_to_terrain', 10000),
+                terrain_type=terrain_data.get('terrain_type', 'unknown'),
+                terrain_roughness=terrain_data.get('terrain_roughness', 0),
+                terrain_obstacles=terrain_data.get('terrain_obstacles', []),
+                terrain_clearance=terrain_data.get('terrain_clearance', 10000)
+            )
+            terrain_assessment = self.terrain_assessor.assess_terrain_risk(terrain_data_obj)
+            
+            # Adjust risk assessment based on terrain conditions
+            risk_assessment = self._adjust_risk_for_terrain(risk_assessment, terrain_assessment)
+        
         # Generate alerts
         alerts = self.predictor.generate_alert(risk_assessment)
         
         # Add weather-related alerts if available
         if weather_assessment:
             alerts.extend(self._generate_weather_alerts(weather_assessment))
+            
+        # Add terrain-related alerts if available
+        if terrain_assessment:
+            alerts.extend(self._generate_terrain_alerts(terrain_assessment))
         
         return {
             'ownship': ownship_info,
             'intruder': intruder_info,
             'risk_assessment': risk_assessment,
             'weather_assessment': weather_assessment,
+            'terrain_assessment': terrain_assessment,
             'alerts': alerts,
             'timestamp': ownship_data.get('timestamp', '')
         }
@@ -113,6 +140,25 @@ class EnhancedTCAS:
         
         return risk_assessment
     
+    def _adjust_risk_for_terrain(self,
+                               risk_assessment: Dict,
+                               terrain_assessment: Dict) -> Dict:
+        """Adjust risk assessment based on terrain conditions."""
+        # Increase risk level if terrain conditions are severe
+        if terrain_assessment['risk_level'] == "CRITICAL":
+            risk_assessment['risk_level'] = "CRITICAL"
+        elif terrain_assessment['risk_level'] == "HIGH" and risk_assessment['risk_level'] != "CRITICAL":
+            risk_assessment['risk_level'] = "HIGH"
+        
+        # Adjust separation requirements based on terrain clearance
+        clearance_factor = terrain_assessment['risk_factors']['clearance']
+        if clearance_factor >= 0.8:
+            risk_assessment['min_separation'] *= 2.0
+        elif clearance_factor >= 0.6:
+            risk_assessment['min_separation'] *= 1.5
+        
+        return risk_assessment
+    
     def _generate_weather_alerts(self, weather_assessment: Dict) -> List[Dict]:
         """Generate weather-related alerts."""
         alerts = []
@@ -139,6 +185,39 @@ class EnhancedTCAS:
         for recommendation in weather_assessment['recommendations']:
             alerts.append({
                 "level": "WEATHER_ADVISORY",
+                "message": recommendation,
+                "urgency": "MEDIUM",
+                "recommended_action": recommendation
+            })
+        
+        return alerts
+    
+    def _generate_terrain_alerts(self, terrain_assessment: Dict) -> List[Dict]:
+        """Generate terrain-related alerts."""
+        alerts = []
+        
+        # Add terrain-specific alerts based on risk level
+        if terrain_assessment['risk_level'] == "CRITICAL":
+            alerts.append({
+                "level": "TERRAIN_ALERT",
+                "message": "CRITICAL TERRAIN PROXIMITY",
+                "urgency": "CRITICAL",
+                "recommended_action": "IMMEDIATE TERRAIN AVOIDANCE REQUIRED",
+                "terrain_conditions": terrain_assessment['terrain_conditions']
+            })
+        elif terrain_assessment['risk_level'] == "HIGH":
+            alerts.append({
+                "level": "TERRAIN_ALERT",
+                "message": "SEVERE TERRAIN PROXIMITY",
+                "urgency": "HIGH",
+                "recommended_action": "PREPARE FOR TERRAIN AVOIDANCE",
+                "terrain_conditions": terrain_assessment['terrain_conditions']
+            })
+        
+        # Add specific terrain-related recommendations
+        for recommendation in terrain_assessment['recommendations']:
+            alerts.append({
+                "level": "TERRAIN_ADVISORY",
                 "message": recommendation,
                 "urgency": "MEDIUM",
                 "recommended_action": recommendation
