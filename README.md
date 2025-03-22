@@ -5,6 +5,12 @@ An advanced Traffic Collision Avoidance System (TCAS) specifically designed for 
 The main reason I built this project is because I believe there's significant potential for improvement in existing TCAS technology. With the advancements we've seen in technology today, TCAS—especially if licensing under the FAA can be done(I know it's not that easy)—should be more advanced and contribute to even greater safety. An enhanced TCAS could have potentially prevented incidents like the tragic mid-air collision that happened at Ronald Reagan Airport on January 29, 2025.  
 
 I coded this system using Cursor.
+
+**Project Status:
+
+As of March 2025, this project is actively maintained and updated. I am still working on enhancements, optimizations, and potential regulatory pathways.
+
+If you have any feedback, suggestions, or notice anything that needs correction, I’d love to hear from you. Feel free to reach out via email at mhosny@berkeley.edu.
 ## Key Features
 
 ### 1. Advanced Object Recognition
@@ -194,10 +200,5 @@ This Enhanced TCAS system is designed to be implemented as a supplemental system
 - Requires regular validation and maintenance
 - Must be used in conjunction with existing safety systems
 
-## Questions
-
-For questions, feel free to contact me at:
-- Email: mhosny@berkeley.edu
-- Phone: (510) 219-3005
 
 
