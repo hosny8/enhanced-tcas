@@ -6,7 +6,7 @@ The main reason I built this project is because I believe there's significant po
 
 I coded this system using Cursor.
 
-**Project Status:
+Project Status:
 
 As of March 2025, this project is actively maintained and updated. I am still working on enhancements, optimizations, and potential regulatory pathways.
 
