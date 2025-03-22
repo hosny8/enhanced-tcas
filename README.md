@@ -10,7 +10,7 @@ Project Status:
 
 As of March 2025, this project is actively maintained and updated. I am still working on enhancements, optimizations, and potential regulatory pathways.
 
-If you have any feedback, suggestions, or notice anything that needs correction, I’d love to hear from you. Feel free to reach out via email at mhosny@berkeley.edu.
+If you have any feedback, suggestions, or notice anything that needs correction, I’d love to hear from you. Feel free to reach out at (510) 219-3005 or at mhosny@berkeley.edu.
 ## Key Features
 
 ### 1. Advanced Object Recognition
