@@ -13,6 +13,8 @@ def create_sample_data():
         'speed_category': 'HIGH',
         'heading_cardinal': 'EAST'
     }
+
+    
     
     intruder_transponder = {
         'position': {'x': 5000, 'y': 5000, 'z': 9500},
